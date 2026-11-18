@@ -46,7 +46,7 @@ input,select{flex:1;min-width:0;padding:10px;border-radius:8px;border:1px solid 
 .hide{display:none}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 h2{font-size:.95rem;color:var(--ac);margin:22px 0 2px;font-weight:600}ol{padding-left:20px}li{margin:8px 0}#ov{position:fixed;inset:0;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:9;text-align:center;padding:24px}#ov .t{font-size:5rem;font-weight:800;font-variant-numeric:tabular-nums}#ov.hide{display:none}nav button{font-size:.8rem}.ph{border-left:4px solid var(--ln);padding:6px 10px;margin:10px 0}.ph.cur{border-color:var(--ac)}.ph b{display:block}</style></head><body><main>
-<div class="top"><div><h1>OPSC Tracker</h1><div class="sub" id="cd"></div></div><div style="text-align:right"><div class="big" id="pct">0%</div><div class="sub">syllabus done</div></div></div>
+<div class="top"><div><h1>OPSC Tracker</h1><div class="sub" id="cd"></div></div><div style="text-align:right"><div class="big" id="pct">0%</div><div class="sub">syllabus done</div></div></div><div class="rowf" style="justify-content:flex-end"><button class="btn g" id="themeBtn" type="button">Switch theme</button></div>
 <div class="bar" style="margin-top:10px"><i id="tot" style="width:0"></i></div>
 <div class="stats"><div class="stat"><b id="st">0</b><span class="sub">day streak</span></div><div class="stat"><b id="td">0h</b><span class="sub">today</span></div><div class="stat"><b id="wk">0h</b><span class="sub">last 7 days</span></div></div>
 
@@ -65,7 +65,7 @@ h2{font-size:.95rem;color:var(--ac);margin:22px 0 2px;font-weight:600}ol{padding
 <section id="p-sta" class="hide">
 <div class="card"><b>Last 7 days (minutes)</b><div class="days" id="days"></div></div>
 <div class="card"><b>Time by subject (all time)</b><div id="bysub"></div></div>
-<div class="card"><b>Exam date</b><div class="rowf"><input id="ed" type="date"><button class="btn" id="sed">Save</button></div></div>
+<div class="card"><b>Exam date</b><div class="rowf"><input id="ed" type="date"><button class="btn" id="sed">Save</button></div></div><div class="card"><b>Protect your study records</b><p class="sub">Export a backup before installing or changing devices. Importing a backup replaces the current tracker data.</p><div class="rowf"><button class="btn" id="exportData">Export backup</button><button class="btn g" id="importData">Import backup</button><input id="backupFile" type="file" accept="application/json,.json" class="hide"></div><div class="sub" id="backupNote" aria-live="polite"></div></div>
 <div class="card"><button class="btn g" id="reset">Reset syllabus to default</button></div>
 </section>
 <section id="p-pho" class="hide"><div class="card"><b>Automatic minimalist phone</b><p class="sub">A web app can’t change your phone’s settings. Android can switch to a minimal mode on a schedule by itself, so set it once and it runs every study session:</p><ol class="sub"><li>Open Settings, then Digital Wellbeing, then Focus mode. Pick the apps that distract you and add a schedule for your study hours.</li><li>In the same place, turn on Bedtime mode with grayscale and Do Not Disturb on a schedule for the evening.</li><li>Set daily app timers for Instagram, YouTube and games.</li><li>Keep only this tracker, Phone and a notes app on your home screen. Move everything else to a folder on the last page.</li></ol><p class="sub">Menu names differ by phone brand. If you can’t find a setting, search for “Focus” in Settings.</p></div></section>
@@ -74,6 +74,7 @@ h2{font-size:.95rem;color:var(--ac);margin:22px 0 2px;font-weight:600}ol{padding
 <nav><button data-t="syl" class="on">Syllabus</button><button data-t="plan">Plan</button><button data-t="foc">Focus</button><button data-t="sta">Progress</button><button data-t="pho">Phone</button></nav>
 <script>
 var KEY='opsc-tracker-v2';
+var THEME_KEY='opsc-tracker-theme';
 var DEFSTR=`#Prelims
 GS-I: Current Events|National events;International events;Government schemes and Odisha updates;Awards, summits, reports and indices
 GS-I: History of India and National Movement|Ancient India;Medieval India;Modern India from mid-18th century;Freedom struggle and its stages;Post-independence consolidation
@@ -107,8 +108,8 @@ Philosophy Paper II: Philosophy of Religion|Notions of God;Proofs for God’s ex
 Personality Test|Current affairs: state, national, international;Own profile and Odisha knowledge;Mock interviews`;
 var S;function uid(){return Math.random().toString(36).slice(2,9)}
 function fresh(){var g='';return DEFSTR.split('\n').filter(Boolean).map(function(l){if(l[0]==='#'){g=l.slice(1);return null}var p=l.split('|');return{id:uid(),g:g,name:p[0],topics:p[1].split(';').map(function(t){return{id:uid(),name:t.trim(),r:0,v:0,m:0}})}}).filter(Boolean)}
-function load(){try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r);return}}catch(e){}S={subs:fresh(),log:[],exam:''};try{var o=localStorage.getItem('opsc-tracker-v1');if(o){o=JSON.parse(o);S.log=o.log||[];S.exam=o.exam||''}}catch(e){}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function load(){try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r);if(!S.subs||!S.log)throw new Error('Invalid saved data');return}}catch(e){}S={subs:fresh(),log:[],exam:''};try{var o=localStorage.getItem('opsc-tracker-v1');if(o){o=JSON.parse(o);S.log=o.log||[];S.exam=o.exam||''}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){$('backupNote').textContent='Storage is full. Export a backup now.'}}
 load();
 function dk(d){d=d||new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -178,17 +179,24 @@ document.querySelectorAll('nav button').forEach(function(b){b.onclick=function()
 var left=25*60,tick=null,run=false,elapsed=0,away=0;
 function clock(){var m=Math.floor(left/60),s=left%60,t=('0'+m).slice(-2)+':'+('0'+s).slice(-2);$('clock').textContent=t;$('oclock').textContent=t}
 var WL=null;
-function showOv(){try{if(window.Android)Android.minimalOn()}catch(e){}$('osub').textContent=$('fsub').value;$('ov').classList.remove('hide');try{var r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(function(){})}catch(e){}try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(l){WL=l}).catch(function(){})}catch(e){}}
+function showOv(){$('osub').textContent=$('fsub').value;$('ov').classList.remove('hide');try{var r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(function(){})}catch(e){}try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(l){WL=l}).catch(function(){})}catch(e){}}
 function hideOv(){try{if(window.Android)Android.minimalOff()}catch(e){}$('ov').classList.add('hide');try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}try{if(WL){WL.release();WL=null}}catch(e){}}
 document.querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){if(run)return;left=+b.dataset.m*60;clock()}});
 function logIt(m){if(m<1)return;S.log.push({d:dk(),s:$('fsub').value||'General',m:m});save();renderStats()}
 function finish(){clearInterval(tick);run=false;hideOv();var m=Math.round(elapsed/60);logIt(m);$('go').textContent='Start focus';$('note').textContent='Saved '+m+' min. Distractions: '+away+'. Take a short break.';elapsed=0;away=0}
 $('go').onclick=function(){if(run){clearInterval(tick);run=false;$('go').textContent='Resume';hideOv();return}
- run=true;$('go').textContent='Pause';if($('mini').checked)showOv();tick=setInterval(function(){left--;elapsed++;clock();if(left<=0){finish();left=25*60;clock()}},1000)};
-$('stop').onclick=function(){if(elapsed>0)finish();left=25*60;clock()};
+ run=true;$('go').textContent='Pause';try{if(window.Android)Android.minimalOn()}catch(e){}if($('mini').checked)showOv();tick=setInterval(function(){left--;elapsed++;clock();if(left<=0){finish();left=25*60;clock()}},1000)};
+$('stop').onclick=function(){if(elapsed>0)finish();else hideOv();left=25*60;clock()};
 document.addEventListener('visibilitychange',function(){if(document.hidden&&run){away++;$('note').textContent='Distractions this session: '+away}});
 $('addm').onclick=function(){var v=parseInt($('mm').value,10);if(v>0){logIt(v);$('mm').value=''}};
 $('sed').onclick=function(){S.exam=$('ed').value;save();renderStats()};
 $('reset').onclick=function(){if(confirm('Replace your syllabus with the default list? Study time stays.')){S.subs=fresh();save();all()}};
-$('ostop').onclick=function(){$('stop').onclick()};all();clock();
+$('ostop').onclick=function(){$('stop').onclick()};
+function applyTheme(v){document.documentElement.setAttribute('data-theme',v);localStorage.setItem(THEME_KEY,v);$('themeBtn').textContent=v==='dark'?'Use light theme':'Use dark theme'}
+var savedTheme=localStorage.getItem(THEME_KEY);applyTheme(savedTheme==='dark'?'dark':'light');
+$('themeBtn').onclick=function(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')};
+$('exportData').onclick=function(){var payload={app:'OPSC-TRACKER',version:2,exportedAt:new Date().toISOString(),data:S};var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='opsc-tracker-backup-'+dk()+'.json';a.click();setTimeout(function(){URL.revokeObjectURL(url)},1000);$('backupNote').textContent='Backup exported. Keep it somewhere safe.'};
+$('importData').onclick=function(){$('backupFile').click()};
+$('backupFile').onchange=function(){var file=this.files&&this.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(){try{var obj=JSON.parse(reader.result),data=obj.data||obj;if(!data||!Array.isArray(data.subs)||!Array.isArray(data.log))throw new Error('This is not a valid OPSC Tracker backup');if(!confirm('Import this backup? Your current tracker data will be replaced.'))return;S=data;save();all();$('backupNote').textContent='Backup restored successfully.'}catch(e){alert('Could not import backup: '+e.message)}};reader.readAsText(file);this.value=''};
+all();clock();
 </script></body></html>
