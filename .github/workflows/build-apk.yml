@@ -1,0 +1,139 @@
+
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+      - name: Create Android project
+        run: |
+          mkdir -p android/app/src/main/java/com/opsc/tracker android/app/src/main/assets
+          cat > android/settings.gradle.kts <<'EOF_FILE'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = "OpscTracker"
+          include(":app")
+          EOF_FILE
+          cat > android/build.gradle.kts <<'EOF_FILE'
+          plugins {
+              id("com.android.application") version "8.5.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+          }
+          EOF_FILE
+          cat > android/gradle.properties <<'EOF_FILE'
+          org.gradle.jvmargs=-Xmx2048m
+          android.nonTransitiveRClass=true
+          EOF_FILE
+          cat > android/app/build.gradle.kts <<'EOF_FILE'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+          android {
+              namespace = "com.opsc.tracker"
+              compileSdk = 34
+              defaultConfig {
+                  applicationId = "com.opsc.tracker"
+                  minSdk = 24
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0"
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions { jvmTarget = "17" }
+          }
+          EOF_FILE
+          cat > android/app/src/main/AndroidManifest.xml <<'EOF_FILE'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+              <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+              <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+                  tools:ignore="ProtectedPermissions" />
+              <application
+                  android:label="OPSC Tracker"
+                  android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true"
+                      android:configChanges="orientation|screenSize|keyboardHidden">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF_FILE
+          cat > android/app/src/main/java/com/opsc/tracker/MainActivity.kt <<'EOF_FILE'
+          package com.opsc.tracker
+
+          import android.app.Activity
+          import android.app.NotificationManager
+          import android.content.Intent
+          import android.os.Bundle
+          import android.provider.Settings
+          import android.webkit.JavascriptInterface
+          import android.webkit.WebView
+
+          class MainActivity : Activity() {
+              private lateinit var web: WebView
+
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  web = WebView(this)
+                  setContentView(web)
+                  web.settings.javaScriptEnabled = true
+                  web.settings.domStorageEnabled = true
+                  web.addJavascriptInterface(Bridge(), "Android")
+                  web.loadUrl("file:///android_asset/index.html")
+              }
+
+              override fun onBackPressed() {
+                  if (web.canGoBack()) web.goBack() else super.onBackPressed()
+              }
+
+              private fun setMinimal(on: Boolean) {
+                  val nm = getSystemService(NotificationManager::class.java)
+                  if (nm.isNotificationPolicyAccessGranted) {
+                      nm.setInterruptionFilter(
+                          if (on) NotificationManager.INTERRUPTION_FILTER_NONE
+                          else NotificationManager.INTERRUPTION_FILTER_ALL
+                      )
+                  } else if (on) {
+                      startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                  }
+                  try {
+                      Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer", 0)
+                      Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer_enabled", if (on) 1 else 0)
+                  } catch (e: SecurityException) { }
+                  try {
+                      if (on) startLockTask() else stopLockTask()
+                  } catch (e: Exception) { }
+              }
+
+              inner class Bridge {
+                  @JavascriptInterface fun minimalOn() { runOnUiThread { setMinimal(true) } }
+                  @JavascriptInterface fun minimalOff() { runOnUiThread { setMinimal(false) } }
+              }
+          }
+          EOF_FILE
+          cp index.html android/app/src/main/assets/index.html
+      - name: Build APK
+        run: cd android && gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OPSC-Tracker-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          
